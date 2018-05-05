@@ -2,6 +2,8 @@
 # -*- coding:utf-8 -*-
 import os
 
+from sidekit import vad_energy
+
 os.environ["SIDEKIT"] = "theano=false,theano_config=cpu,libsvm=false,mpi=false"
 from sidekit.frontend.io import read_audio, write_hdf5
 from sidekit.frontend.features import mfcc, plp
@@ -33,7 +35,7 @@ class Fea(sidekit.FeaturesExtractor):
                                   filter_bank_size=40,
                                   window_size=0.025,
                                   shift=0.01,
-                                  ceps_number=23,
+                                  ceps_number=12,
                                   vad="energy",
                                   pre_emphasis=0.97,
                                   save_param=["vad", "energy", "cep", "fb"],
@@ -43,7 +45,8 @@ class Fea(sidekit.FeaturesExtractor):
                                                 feature_filename_structure=None,
                                                 sources=None,
                                                 dataset_list=None,  # ["energy","cep","fb"],
-                                                feat_norm="cmvn_sliding",  # cms cmvn stg cmvn_sliding cms_sliding
+                                                feat_norm=None,
+                                                # cms cmvn stg cmvn_sliding cms_sliding,there do not do it ,we can do it in next step
                                                 delta=True,
                                                 double_delta=True,
                                                 rasta=True,
@@ -63,9 +66,9 @@ class Fea(sidekit.FeaturesExtractor):
         # s=server.load('sre04/xgvxTA', input_feature_filename=None, label=None, start=None,stop = None)
 
     @ut.timing('getFea')
-    def feaExtract(self, year: list = None, extract: bool = True):
+    def feaExtract(self, num_thread, year: list = None, extract: bool = True):
         if year is None:
-            year = [10, 4, 5, 6, 8, 'cellular', 'phase']  # 10 ,4,5,6,8,'cellular','phase'
+            year = [4, 5, 6, 8, 'cellular', 'phase']  # 10 ,4,5,6,8,'cellular','phase'
 
         idmapAll = idc.readAllSreIdmap()
         for i in year:
@@ -75,13 +78,20 @@ class Fea(sidekit.FeaturesExtractor):
                 name = list(np.concatenate([y[0].rightids, y[1].rightids, y[2].rightids, y[3].rightids]))
             else:
                 name = list(np.concatenate([y[0].rightids, y[1].rightids]))
-            self.feaGet_core(i, name, extract)
+            self.feaGet_core(i, name, extract, num_thread)
 
-    def feaGet_core(self, i, name, extract):
+    @ut.timing('feaExtract_10s')
+    def feaExtract_10s(self, num_thread, extract: bool = True):
+        en = sidekit.IdMap(root + "fea/enroll_idmap_10s.h5")
+        te = sidekit.IdMap(root + "fea/test_idmap_10s.h5")
+        name = list(np.concatenate([en.rightids, te.rightids]))
+        self.feaGet_core(10, name, extract, num_thread)
+
+    def feaGet_core(self, i, name, extract, num_thread=None):
         extra, name_list, channel_list = [], [], []
         if i == 10:
             for j in name:
-                name_list.append(j[:-7])
+                name_list.append(j[:-7])  # may is should be -7
                 channel_list.append(0 if j[-2] == 'A' else 1)
                 extra.append(j[-3:])
         else:
@@ -102,7 +112,7 @@ class Fea(sidekit.FeaturesExtractor):
         if extract:
             self.save_list(show_list=name_list,
                            channel_list=channel_list,
-                           num_thread=None, extra=self.extra)
+                           num_thread=num_thread, extra=self.extra)
         fi = os.listdir(root + param4[:-7])
         if i in [4, 5, 6]:
             s = pd.DataFrame(np.array([i[:4] + i[-2:] + ".h5" for i in name]))
@@ -130,8 +140,7 @@ class Fea(sidekit.FeaturesExtractor):
         elif year in ['cellular', 'phase']:
             name = [i[:8] + ".SPH" + i[8:10] for i in list(rest[0])]
         elif year == 10:
-            print("feaExtractAgain() has a problem in year=10,cause that i have not write this code")
-            return
+            name = [i[:-6] + ".sph" + i[-6:-3] for i in list(rest[0])]
         self.feaGet_core(year, name, True)
 
     # overwrite save_list method,cause original has some problems in case that cannot complete 'save_list',fuck!!!
@@ -151,7 +160,7 @@ class Fea(sidekit.FeaturesExtractor):
         # ma=Manager()
         # lock=ma.Lock()
         #
-        pool = Pool(  # num_thread
+        pool = Pool(num_thread  # num_thread
             # ,initializer=Fea.globalized,initargs=(lock)
         )  # default number of processes is os.cpu_count()
 
@@ -234,21 +243,12 @@ class Fea(sidekit.FeaturesExtractor):
 
                 # Perform feature selection
                 label, threshold = self._vad(cep, energy, fb, signal[start:end, channel])
+                # print(len(label[label]))
                 if len(label) < len(energy):
                     label = np.hstack((label, np.zeros(len(energy) - len(label), dtype='bool')))
 
                 start = end - dec2
                 end = min(end + dec, length)
-
-        # Compute the mean and std of fb and cepstral coefficient comuted for all selected frames
-        # energy_mean = energy[label].mean(axis=0)
-        # energy_std = energy[label].std(axis=0)
-        # fb_mean = fb[label, :].mean(axis=0)
-        # fb_std = fb[label, :].std(axis=0)
-        # cep_mean = cep[label, :].mean(axis=0)
-        # cep_std = cep[label, :].std(axis=0)
-        # bnf_mean = bnf[label, :].mean(axis=0)
-        # bnf_std = bnf[label, :].std(axis=0)
 
         # Create the HDF5 file
         # Create the directory if it dosn't exist
@@ -267,23 +267,10 @@ class Fea(sidekit.FeaturesExtractor):
             # energy_std = None
         if "fb" not in self.save_param:
             fb = None
-            # fb_mean = None
-            # fb_std = None
-        if "bnf" not in self.save_param:
-            bnf = None
-            # bnf_mean = None
-            # bnf_std = None
+
         if "vad" not in self.save_param:
             label = None
-        # if not self.keep_all_features:
-        #     if not cep is None:
-        #         cep = cep[label, :]
-        #     if not energy is None:
-        #         energy = energy[label]
-        #     if not fb is None:
-        #         fb = fb[label, :]
-        #     if not bnf is None:
-        #         bnf = bnf[label, :]
+
 
         cep, fb, label = self.postProc(cep, energy, fb, label)
 
@@ -295,17 +282,33 @@ class Fea(sidekit.FeaturesExtractor):
                    label)
 
         h5f.close()
+        pass
 
     def postProc(self, cep, energy, fb, label):
         cep, _ = self.feaServer.post_processing(np.concatenate([energy[:, np.newaxis], cep], axis=1), label)
         fb, label = self.feaServer.post_processing(fb, label)
         return cep, fb, label
 
+    def _vad(self, cep, log_energy, fb, x, label_file_name=None):
+
+        label, threshold = vad_energy(log_energy, distrib_nb=3,
+                                      nb_train_it=8, flooring=0.0001,
+                                      ceiling=1.5, alpha=2.5)  # defult is alpha=0.1
+        return label, threshold
 
 def main():
+    # fea.feaExtractAgain(10)
+
+    # remote
+    # num_thread = 48
+    # fea = Fea()
+    # fea.feaExtract(num_thread,[4,5,6,8],True)
+
+    # local
+    num_thread = 32
     fea = Fea()
-    fea.feaExtractAgain(8)
-    # fea.feaExtract([8],False)
+    fea.feaExtract_10s(num_thread, True)
+    fea.feaExtract(num_thread, ['cellular', 'phase'], True)
 
 
 if __name__ == '__main__':

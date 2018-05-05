@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+
 import scipy.io as io
 import numpy as np
 
@@ -8,8 +11,8 @@ def DETsort(x, col=''):
     # DETsort Sort rows
 
     assert x.ndim > 1, 'x must be a 2D matrix'
-    if col == '':
-        list(range(1, x.shape[1]))
+    # if col == '':
+    #     list(range(1, x.shape[1]))
 
     ndx = np.arange(x.shape[0])
 
@@ -65,6 +68,17 @@ def cal_eer(Score, Key, NumClass):
     targetScore = Score[id]
     notargetScore = Score[id == False]
 
+    [Pmiss, Pfa] = Compute_DET(targetScore, notargetScore)
+    # out
+    P_gap = np.abs(Pmiss - Pfa)
+    minIdx = np.argmin(P_gap, axis=0)
+    minDes = P_gap[minIdx]
+    eer = (Pmiss[minIdx] + Pfa[minIdx]) / 2
+    return eer[0]
+
+
+def cal_eer2(scores, key):
+    targetScore, notargetScore = scores.get_tar_non(key)
     [Pmiss, Pfa] = Compute_DET(targetScore, notargetScore)
     # out
     P_gap = np.abs(Pmiss - Pfa)

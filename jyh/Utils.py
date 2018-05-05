@@ -12,7 +12,8 @@ import re
 # import h5py
 import scipy.io as io
 import pickle as pk
-
+import logging
+import sys
 EX1 = "use decorator @log that you should append a string parameter in your return tuple so we can write it to log file\n"
 
 logPath = "./log.txt"
@@ -364,6 +365,20 @@ def eachFile(filepath):
     # print child.decode('gbk') # .decode('gbk')是解决中文显示乱码问题
 
 
+def PCAWhitening(x):
+    x -= np.mean(x, axis=0)  # 减去均值，使得以0为中心
+    cov = np.dot(x.T, x) / x.shape[0]  # 计算协方差矩阵
+    U, S, V = np.linalg.svd(cov)  # 矩阵的奇异值分解
+    xrot = np.dot(x, U)
+    xwhite = xrot / np.sqrt(S + 1e-5)  # 加上1e-5是为了防止出现分母为0的异常
+    return xwhite
+
+
+def lengthNorm(x):  # object to vector
+    x = x[None]  # add a dimention
+    return x / np.sqrt(np.matmul(x, x.T))
+
+
 # fast algorithm to calculate the euclidean distances between each vector from matrix A and matrix B
 def euclideanDistances(A, B):
     if not isinstance(A, np.matrix):
@@ -413,6 +428,30 @@ def showAsGridGraghs(size_figure_grid, data, show=False, savePath=None):  # data
         plt.show()
     else:
         plt.close()
+
+
+def logByLogginModule(string):
+    # 获取logger实例，如果参数为空则返回root logger
+    logger = logging.getLogger(string)
+
+    # 指定logger输出格式
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s: %(message)s')
+
+    # 文件日志
+    file_handler = logging.FileHandler("./log.txt")
+    file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
+
+    # 控制台日志
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.formatter = formatter  # 也可以直接给formatter赋值
+
+    # 为logger添加的日志处理器
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    # 指定日志的最低输出级别，默认为WARN级别
+    logger.setLevel(logging.INFO)
+    return logger
 
 # def genrateHDF5():
 #     F = h5py.File("./1.hdf5", "w")

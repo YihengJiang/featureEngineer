@@ -34,19 +34,19 @@ class IVector_Base(metaclass=ABCMeta):
     '''Step2.3:Now compute the development ivectors of train data set for each speaker and channel.  The result is size tvDim x nSpeakers x nChannels.'''
 
     @abstractmethod
-    def computeDevIV(self, data=None):
+    def extractIV(self, data=None):
         pass
 
     '''Step3.1:do LDA on the development iVectors to find the dimensions that matter.'''
 
     @abstractmethod
-    def trainLDA(self, data=None):
+    def LDA_WCCN_cos_Score(self, data=None):
         pass
 
     '''Step3.2: Now train a Gaussian PLDA model with development i-vectors'''
 
     @abstractmethod
-    def trainGPLDA(self, data=None):
+    def PLDA_Score(self, data=None):
         pass
 
     '''Step4: now we have the channel and LDA models. Let's compute ivector and do lda with enrollment and test,respectively'''
@@ -58,5 +58,5 @@ class IVector_Base(metaclass=ABCMeta):
     '''Step5: Now score the models with all the test data.'''
 
     @abstractmethod
-    def scoreAndVisualization(self, data=None):
+    def visualization(self, data=None):
         pass
