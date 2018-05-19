@@ -83,6 +83,7 @@ class IdMapConstructor():
     def tesTableConstructorCustom():
         idmapAll = IdMapConstructor.readAllSreIdmap()
         trial_key = IdMapConstructor.keyConstructorCustom()
+        # sre10
         enroll_idmap = sidekit.IdMap()
         enroll_idmap.leftids = trial_key.modelid
         enroll_idmap.rightids = np.array(['sre10/' + i[:-7] + i[-3:] for i in list(trial_key.modelset)])
@@ -97,32 +98,53 @@ class IdMapConstructor():
 
         ubm_TV_idmap = sidekit.IdMap()
         plda_idmap = sidekit.IdMap()
-        tl, tr, ul, ur = [], [], [], []
+        dl_valid_idmap = sidekit.IdMap()
+        dl_train_idmap = sidekit.IdMap()
+        s568l, s568r, swbl, swbr, s4l, s4r = [], [], [], [], [], []
         for i, j in idmapAll.items():
             if i == '10':
                 continue
-            if len(j) == 4:
-                tl += list(j[0].leftids) + list(j[1].leftids) + list(j[2].leftids) + list(j[3].leftids)
-                tr += ['sre0' + i + '/' + k[:-6] + k[-2:] for k in
+            elif i == '4':
+                s4l += list(j[0].leftids) + list(j[1].leftids) + list(j[2].leftids) + list(j[3].leftids)
+                s4r += ['sre0' + i + '/' + k[:-6] + k[-2:] for k in
+                        list(j[0].rightids) + list(j[1].rightids) + list(j[2].rightids) + list(j[3].rightids)]
+            elif len(j) == 4:
+                s568l += list(j[0].leftids) + list(j[1].leftids) + list(j[2].leftids) + list(j[3].leftids)
+                s568r += ['sre0' + i + '/' + k[:-6] + k[-2:] for k in
                        list(j[0].rightids) + list(j[1].rightids) + list(j[2].rightids) + list(j[3].rightids)]
             else:
-                ul += list(j[0].leftids) + list(j[1].leftids)
-                ur += [i + '/' + k[:-6] + k[-2:] for k in list(j[0].rightids) + list(j[1].rightids)]
-        ubm_TV_idmap.leftids = np.array(tl + ul)
-        ubm_TV_idmap.rightids = np.array(tr + ur)
+                swbl += list(j[0].leftids) + list(j[1].leftids)
+                swbr += [i + '/' + k[:-6] + k[-2:] for k in list(j[0].rightids) + list(j[1].rightids)]
+        # all data except sre10
+        ubm_TV_idmap.leftids = np.array(s4l + s568l + swbl)
+        ubm_TV_idmap.rightids = np.array(s4r + s568r + swbr)
         ubm_TV_idmap.start = np.empty(np.size(ubm_TV_idmap.leftids), '|O')
         ubm_TV_idmap.stop = np.empty(np.size(ubm_TV_idmap.leftids), '|O')
-        plda_idmap.leftids = np.array(tl)
-        plda_idmap.rightids = np.array(tr)
+        # sre04-sre08
+        plda_idmap.leftids = np.array(s4l + s568l)
+        plda_idmap.rightids = np.array(s4r + s568r)
         plda_idmap.start = np.empty(np.size(plda_idmap.leftids), '|O')
         plda_idmap.stop = np.empty(np.size(plda_idmap.leftids), '|O')
+        # sre04
+        dl_valid_idmap.leftids = np.array(s4l)
+        dl_valid_idmap.rightids = np.array(s4r)
+        dl_valid_idmap.start = np.empty(np.size(dl_valid_idmap.leftids), '|O')
+        dl_valid_idmap.stop = np.empty(np.size(dl_valid_idmap.leftids), '|O')
+        # sre05-sre08 and SwitchBoard
+        dl_train_idmap.leftids = np.array(s568l + swbl)
+        dl_train_idmap.rightids = np.array(s568r + swbr)
+        dl_train_idmap.start = np.empty(np.size(dl_train_idmap.leftids), '|O')
+        dl_train_idmap.stop = np.empty(np.size(dl_train_idmap.leftids), '|O')
 
         trial_key.write(root + "fea/trial_key_custom.h5")
         test_ndx.write(root + "fea/test_ndx_custom.h5")
         enroll_idmap.write(root + "fea/enroll_idmap_custom.h5")
         test_idmap.write(root + "fea/test_idmap_custom.h5")
+
         ubm_TV_idmap.write(root + "fea/ubm_TV_idmap.h5")
         plda_idmap.write(root + "fea/plda_idmap.h5")
+        dl_valid_idmap.write(root + "fea/dl_valid_idmap.h5")
+        dl_train_idmap.write(root + "fea/dl_train_idmap.h5")
 
     @staticmethod
     def tesTableConstructor10s():
@@ -158,10 +180,10 @@ class IdMapConstructor():
         su = pd.DataFrame([[i[0], "1" + str(i[1]), i[2], i[3], i[4], i[5]] for i in su.as_matrix()])
         su.columns = ['0', '1', '2', '3', '4', '5']
         tmp = pd.merge(su, tmp, how='inner', left_on='1', right_on='id')
-        tmp = tmp[['0', '2', '3', '4', '5', 'fi']]
+        tmp = tmp[['0', '2', '3', '4', '5', 'id']]
 
         ndx = sidekit.Ndx()
-        ndx.modelset = tmp['fi'].drop_duplicates().as_matrix()
+        ndx.modelset = tmp['id'].drop_duplicates().as_matrix()
         modelset = list(ndx.modelset)
         segset = [str(i[0]) + "/" + str(i[1]) + "/" + str(i[2]) + "T" + str(i[3]) + "1" for i in
                   list(tmp[['2', '3', '4', '5']].drop_duplicates().as_matrix())]
@@ -186,9 +208,14 @@ class IdMapConstructor():
         key.non = ~(tar.as_matrix())
 
         # there is wrong in test and enroll rightid,so i revise it:
-        enroll.rightids = np.array([i[:-3] + ".sph" + i[-3:] for i in list(enroll.rightids)])
-        test.rightids = np.array([i[:-3] + ".sph" + i[-3:] for i in list(test.rightids)])
-
+        enroll.rightids = np.array(["sre10/" + i for i in list(enroll.rightids)])
+        test.rightids = np.array(["sre10/" + i for i in list(test.rightids)])
+        ###########################################################################
+        # ndx.modelset=np.array(["sre10/"+i for i in list(ndx.modelset)])
+        ndx.segset = np.array(["sre10/" + i for i in list(ndx.segset)])
+        # key.modelset = np.array(["sre10/" + i for i in list(key.modelset)])
+        key.segset = np.array(["sre10/" + i for i in list(key.segset)])
+        ###########################################################################
         enroll.write(root + "fea/enroll_idmap_10s.h5")
         test.write(root + "fea/test_idmap_10s.h5")
         ndx.write(root + "fea/test_ndx_10s.h5")
@@ -961,9 +988,10 @@ class IdMapConstructor():
 @ut.timing("TotalTime")
 def main():
     IdMapConstructor.tesTableConstructor10s()
+    # IdMapConstructor.tesTableConstructor10s()
     # s=sidekit.Key(root + "fea/trialkey.h5")
     # t = IdMapConstructor.key2ndx_SelectSomeTrialToDo(10, True)
-    # IdMapConstructor.keyConstructor()
+    # IdMapConstructor.keyConstructorCustom()
     # IdMapConstructor.getDataStat()
     # t=IdMapConstructor.readSreIdmap('phase')
     # pass

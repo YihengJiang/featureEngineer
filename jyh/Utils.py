@@ -219,11 +219,12 @@ class Timing(object):
         self.type = type
 
     def __enter__(self):
+        print('[Begin ' + self.type + "]=============================================")
         self.start = time.time()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         elapse = time.time() - self.start
-        print('[%s]  time: %.2f s' % (self.type, elapse))
+        print('[End %s]  time: %.2f s' % (self.type, elapse))
 
 
 def listDirRecursive(dir):
@@ -438,7 +439,9 @@ def logByLogginModule(string):
     formatter = logging.Formatter('%(asctime)s %(levelname)-8s: %(message)s')
 
     # 文件日志
-    file_handler = logging.FileHandler("./log.txt")
+    if not string:
+        string = ''
+    file_handler = logging.FileHandler("./log/" + string + "_log.txt")
     file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
 
     # 控制台日志
@@ -471,3 +474,8 @@ def logByLogginModule(string):
 # if __name__ == '__main__':
 #     genrateHDF5()
 #     pass
+def creatDirIfNotExists(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+        return True
+    return False

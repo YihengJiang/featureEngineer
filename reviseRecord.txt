@@ -1,5 +1,0 @@
-Module that be revised by me:
-
-/home/jyh/anaconda3/lib/python3.6/site-packages/sidekit/features_extractor.py
-/home/jyh/anaconda3/lib/python3.6/site-packages/sidekit/features_server.py
-/home/jyh/anaconda3/lib/python3.6/site-packages/sidekit/mixture.py

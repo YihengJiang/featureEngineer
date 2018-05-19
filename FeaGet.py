@@ -298,18 +298,18 @@ class Fea(sidekit.FeaturesExtractor):
 
 def main():
     # fea.feaExtractAgain(10)
-
+    ####################################################################################
     # remote
     # num_thread = 48
     # fea = Fea()
     # fea.feaExtract(num_thread,[4,5,6,8],True)
-
+    ####################################################################################
     # local
     num_thread = 32
     fea = Fea()
     fea.feaExtract_10s(num_thread, True)
     fea.feaExtract(num_thread, ['cellular', 'phase'], True)
-
+    ####################################################################################
 
 if __name__ == '__main__':
     main()
