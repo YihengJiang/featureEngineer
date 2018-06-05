@@ -1,0 +1,296 @@
+2018-05-21 10:18:57,809 INFO    : Start it 0
+2018-05-21 10:18:58,258 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 10:43:53,452 INFO    : Start it 1
+2018-05-21 10:43:54,414 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 11:09:00,036 INFO    : Start it 2
+2018-05-21 11:09:01,077 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 11:35:36,680 INFO    : Start it 3
+2018-05-21 11:35:37,736 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 12:02:14,401 INFO    : Start it 4
+2018-05-21 12:02:15,441 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 12:28:25,451 INFO    : Start it 5
+2018-05-21 12:28:26,514 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 12:55:11,352 INFO    : Start it 6
+2018-05-21 12:55:12,431 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 13:21:03,908 INFO    : Start it 7
+2018-05-21 13:21:04,948 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 13:47:21,975 INFO    : Start it 8
+2018-05-21 13:47:23,028 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 21:31:54,910 INFO    : Start it 0
+2018-05-21 21:31:55,721 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 21:58:08,503 INFO    : Start it 1
+2018-05-21 21:58:09,495 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 22:26:00,264 INFO    : Start it 2
+2018-05-21 22:26:01,276 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 22:53:54,414 INFO    : Start it 3
+2018-05-21 22:53:55,451 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 23:22:16,414 INFO    : Start it 4
+2018-05-21 23:22:17,489 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-21 23:49:46,892 INFO    : Start it 5
+2018-05-21 23:49:47,979 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-22 00:18:26,542 INFO    : Start it 6
+2018-05-22 00:18:27,609 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-22 00:45:43,748 INFO    : Start it 7
+2018-05-22 00:45:44,841 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-22 01:13:27,660 INFO    : Start it 8
+2018-05-22 01:13:28,721 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-23 10:57:55,268 INFO    : =================================================================================================
+2018-05-23 16:05:13,717 INFO    : EM (start) distrib_nb: 2 1/1 gain: -58.311530
+2018-05-23 16:31:20,355 INFO    : EM (start) distrib_nb: 4 1/2 gain: -55.115974
+2018-05-23 16:57:59,181 INFO    : EM (continu) distrib_nb: 4 2/2 gain: 1.058477
+2018-05-23 17:25:03,364 INFO    : EM (start) distrib_nb: 8 1/2 gain: -53.254387
+2018-05-23 17:53:01,650 INFO    : EM (continu) distrib_nb: 8 2/2 gain: 1.010688
+2018-05-23 18:25:15,874 INFO    : EM (start) distrib_nb: 16 1/4 gain: -51.899307
+2018-05-23 18:55:26,386 INFO    : EM (continu) distrib_nb: 16 2/4 gain: 0.555512
+2018-05-23 19:24:51,498 INFO    : EM (continu) distrib_nb: 16 3/4 gain: 0.301087
+2018-05-23 19:56:39,736 INFO    : EM (continu) distrib_nb: 16 4/4 gain: 0.174170
+2018-05-23 20:36:05,446 INFO    : EM (start) distrib_nb: 32 1/4 gain: -50.870506
+2018-05-23 21:10:47,087 INFO    : EM (continu) distrib_nb: 32 2/4 gain: 0.349794
+2018-05-23 21:47:03,656 INFO    : EM (continu) distrib_nb: 32 3/4 gain: 0.186309
+2018-05-23 22:21:33,467 INFO    : EM (continu) distrib_nb: 32 4/4 gain: 0.135467
+2018-05-23 23:09:27,622 INFO    : EM (start) distrib_nb: 64 1/4 gain: -50.203224
+2018-05-23 23:56:36,417 INFO    : EM (continu) distrib_nb: 64 2/4 gain: 0.339391
+2018-05-24 00:44:38,983 INFO    : EM (continu) distrib_nb: 64 3/4 gain: 0.202578
+2018-05-24 01:32:31,622 INFO    : EM (continu) distrib_nb: 64 4/4 gain: 0.169841
+2018-05-24 02:42:49,291 INFO    : EM (start) distrib_nb: 128 1/4 gain: -49.354372
+2018-05-24 03:52:00,879 INFO    : EM (continu) distrib_nb: 128 2/4 gain: 0.452667
+2018-05-24 05:01:40,345 INFO    : EM (continu) distrib_nb: 128 3/4 gain: 0.191059
+2018-05-24 06:10:41,897 INFO    : EM (continu) distrib_nb: 128 4/4 gain: 0.136825
+2018-05-24 08:12:24,888 INFO    : EM (start) distrib_nb: 256 1/8 gain: -48.586244
+2018-05-24 10:15:04,240 INFO    : EM (continu) distrib_nb: 256 2/8 gain: 0.294902
+2018-05-24 12:18:10,388 INFO    : EM (continu) distrib_nb: 256 3/8 gain: 0.151881
+2018-05-24 14:20:35,157 INFO    : EM (continu) distrib_nb: 256 4/8 gain: 0.097385
+2018-05-24 16:23:47,997 INFO    : EM (continu) distrib_nb: 256 5/8 gain: 0.066777
+2018-05-24 18:26:48,364 INFO    : EM (continu) distrib_nb: 256 6/8 gain: 0.052163
+2018-05-24 20:29:27,300 INFO    : EM (continu) distrib_nb: 256 7/8 gain: 0.043101
+2018-05-24 22:32:12,168 INFO    : EM (continu) distrib_nb: 256 8/8 gain: 0.036138
+2018-05-25 02:21:24,353 INFO    : EM (start) distrib_nb: 512 1/8 gain: -47.900880
+2018-05-25 06:09:20,703 INFO    : EM (continu) distrib_nb: 512 2/8 gain: 0.238659
+2018-05-25 09:57:39,636 INFO    : EM (continu) distrib_nb: 512 3/8 gain: 0.111719
+2018-05-25 13:46:15,642 INFO    : EM (continu) distrib_nb: 512 4/8 gain: 0.074187
+2018-05-25 17:34:59,303 INFO    : EM (continu) distrib_nb: 512 5/8 gain: 0.052731
+2018-05-25 21:23:33,393 INFO    : EM (continu) distrib_nb: 512 6/8 gain: 0.040733
+2018-05-26 01:13:06,891 INFO    : EM (continu) distrib_nb: 512 7/8 gain: 0.033550
+2018-05-26 05:02:25,434 INFO    : EM (continu) distrib_nb: 512 8/8 gain: 0.028745
+2018-05-26 11:58:10,892 INFO    : EM (start) distrib_nb: 1024 1/8 gain: -47.379115
+2018-05-26 18:53:21,108 INFO    : EM (continu) distrib_nb: 1024 2/8 gain: 0.221016
+2018-05-27 01:47:00,619 INFO    : EM (continu) distrib_nb: 1024 3/8 gain: 0.108485
+2018-05-27 08:40:33,843 INFO    : EM (continu) distrib_nb: 1024 4/8 gain: 0.075078
+2018-05-27 15:34:50,441 INFO    : EM (continu) distrib_nb: 1024 5/8 gain: 0.054916
+2018-05-27 22:30:12,041 INFO    : EM (continu) distrib_nb: 1024 6/8 gain: 0.042689
+2018-05-28 05:22:29,295 INFO    : EM (continu) distrib_nb: 1024 7/8 gain: 0.035339
+2018-05-28 12:16:29,894 INFO    : EM (continu) distrib_nb: 1024 8/8 gain: 0.029276
+2018-05-29 13:10:31,801 INFO    : Start training model with 1 distributions
+2018-05-29 13:10:31,815 INFO    : 	iteration 1 / 1
+2018-05-29 13:10:31,816 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:14:47,189 INFO    : Start M-step, rank 0
+2018-05-29 13:14:47,244 INFO    : Start training model with 2 distributions
+2018-05-29 13:14:47,265 INFO    : 	iteration 1 / 2
+2018-05-29 13:14:47,266 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:17:45,593 INFO    : Start M-step, rank 0
+2018-05-29 13:17:45,701 INFO    : 	iteration 2 / 2
+2018-05-29 13:17:45,702 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:20:44,085 INFO    : Start M-step, rank 0
+2018-05-29 13:20:44,216 INFO    : Start training model with 4 distributions
+2018-05-29 13:20:44,227 INFO    : 	iteration 1 / 2
+2018-05-29 13:20:44,228 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:23:37,511 INFO    : Start M-step, rank 0
+2018-05-29 13:23:37,547 INFO    : 	iteration 2 / 2
+2018-05-29 13:23:37,548 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:26:37,168 INFO    : Start M-step, rank 0
+2018-05-29 13:26:37,301 INFO    : Start training model with 8 distributions
+2018-05-29 13:26:37,311 INFO    : 	iteration 1 / 4
+2018-05-29 13:26:37,311 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:29:35,548 INFO    : Start M-step, rank 0
+2018-05-29 13:29:35,604 INFO    : 	iteration 2 / 4
+2018-05-29 13:29:35,606 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:32:42,894 INFO    : Start M-step, rank 0
+2018-05-29 13:32:43,024 INFO    : 	iteration 3 / 4
+2018-05-29 13:32:43,024 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:35:46,141 INFO    : Start M-step, rank 0
+2018-05-29 13:35:46,212 INFO    : 	iteration 4 / 4
+2018-05-29 13:35:46,212 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:38:56,181 INFO    : Start M-step, rank 0
+2018-05-29 13:38:56,276 INFO    : Start training model with 16 distributions
+2018-05-29 13:38:56,287 INFO    : 	iteration 1 / 4
+2018-05-29 13:38:56,288 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:42:29,476 INFO    : Start M-step, rank 0
+2018-05-29 13:42:29,556 INFO    : 	iteration 2 / 4
+2018-05-29 13:42:29,557 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:45:59,404 INFO    : Start M-step, rank 0
+2018-05-29 13:45:59,484 INFO    : 	iteration 3 / 4
+2018-05-29 13:45:59,485 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:49:38,200 INFO    : Start M-step, rank 0
+2018-05-29 13:49:38,312 INFO    : 	iteration 4 / 4
+2018-05-29 13:49:38,312 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:53:13,176 INFO    : Start M-step, rank 0
+2018-05-29 13:53:13,284 INFO    : Start training model with 32 distributions
+2018-05-29 13:53:13,296 INFO    : 	iteration 1 / 4
+2018-05-29 13:53:13,297 INFO    : 
+Start E-step, rank 0
+2018-05-29 13:57:30,645 INFO    : Start M-step, rank 0
+2018-05-29 13:57:30,712 INFO    : 	iteration 2 / 4
+2018-05-29 13:57:30,713 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:01:49,900 INFO    : Start M-step, rank 0
+2018-05-29 14:01:49,997 INFO    : 	iteration 3 / 4
+2018-05-29 14:01:49,998 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:06:05,848 INFO    : Start M-step, rank 0
+2018-05-29 14:06:05,916 INFO    : 	iteration 4 / 4
+2018-05-29 14:06:05,917 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:10:24,624 INFO    : Start M-step, rank 0
+2018-05-29 14:10:24,732 INFO    : Start training model with 64 distributions
+2018-05-29 14:10:24,746 INFO    : 	iteration 1 / 4
+2018-05-29 14:10:24,747 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:15:49,897 INFO    : Start M-step, rank 0
+2018-05-29 14:15:49,976 INFO    : 	iteration 2 / 4
+2018-05-29 14:15:49,976 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:21:13,623 INFO    : Start M-step, rank 0
+2018-05-29 14:21:13,648 INFO    : 	iteration 3 / 4
+2018-05-29 14:21:13,649 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:26:37,568 INFO    : Start M-step, rank 0
+2018-05-29 14:26:37,604 INFO    : 	iteration 4 / 4
+2018-05-29 14:26:37,604 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:32:01,144 INFO    : Start M-step, rank 0
+2018-05-29 14:32:01,204 INFO    : Start training model with 128 distributions
+2018-05-29 14:32:01,221 INFO    : 	iteration 1 / 8
+2018-05-29 14:32:01,222 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:39:24,094 INFO    : Start M-step, rank 0
+2018-05-29 14:39:24,140 INFO    : 	iteration 2 / 8
+2018-05-29 14:39:24,140 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:46:43,172 INFO    : Start M-step, rank 0
+2018-05-29 14:46:43,233 INFO    : 	iteration 3 / 8
+2018-05-29 14:46:43,233 INFO    : 
+Start E-step, rank 0
+2018-05-29 14:53:58,688 INFO    : Start M-step, rank 0
+2018-05-29 14:53:58,710 INFO    : 	iteration 4 / 8
+2018-05-29 14:53:58,710 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:01:20,716 INFO    : Start M-step, rank 0
+2018-05-29 15:01:20,764 INFO    : 	iteration 5 / 8
+2018-05-29 15:01:20,765 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:08:40,314 INFO    : Start M-step, rank 0
+2018-05-29 15:08:40,334 INFO    : 	iteration 6 / 8
+2018-05-29 15:08:40,335 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:16:10,876 INFO    : Start M-step, rank 0
+2018-05-29 15:16:10,908 INFO    : 	iteration 7 / 8
+2018-05-29 15:16:10,909 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:23:43,152 INFO    : Start M-step, rank 0
+2018-05-29 15:23:43,184 INFO    : 	iteration 8 / 8
+2018-05-29 15:23:43,184 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:31:14,733 INFO    : Start M-step, rank 0
+2018-05-29 15:31:14,752 INFO    : Start training model with 256 distributions
+2018-05-29 15:31:14,776 INFO    : 	iteration 1 / 8
+2018-05-29 15:31:14,777 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:42:53,629 INFO    : Start M-step, rank 0
+2018-05-29 15:42:53,657 INFO    : 	iteration 2 / 8
+2018-05-29 15:42:53,658 INFO    : 
+Start E-step, rank 0
+2018-05-29 15:54:34,374 INFO    : Start M-step, rank 0
+2018-05-29 15:54:34,426 INFO    : 	iteration 3 / 8
+2018-05-29 15:54:34,427 INFO    : 
+Start E-step, rank 0
+2018-05-29 16:06:13,116 INFO    : Start M-step, rank 0
+2018-05-29 16:06:13,160 INFO    : 	iteration 4 / 8
+2018-05-29 16:06:13,161 INFO    : 
+Start E-step, rank 0
+2018-05-29 16:17:56,200 INFO    : Start M-step, rank 0
+2018-05-29 16:17:56,244 INFO    : 	iteration 5 / 8
+2018-05-29 16:17:56,245 INFO    : 
+Start E-step, rank 0
+2018-05-29 16:29:36,138 INFO    : Start M-step, rank 0
+2018-05-29 16:29:36,205 INFO    : 	iteration 6 / 8
+2018-05-29 16:29:36,206 INFO    : 
+Start E-step, rank 0
+2018-05-29 16:41:14,505 INFO    : Start M-step, rank 0
+2018-05-29 16:41:14,533 INFO    : 	iteration 7 / 8
+2018-05-29 16:41:14,535 INFO    : 
+Start E-step, rank 0
+2018-05-29 16:52:49,727 INFO    : Start M-step, rank 0
+2018-05-29 16:52:49,751 INFO    : 	iteration 8 / 8
+2018-05-29 16:52:49,752 INFO    : 
+Start E-step, rank 0
+2018-05-29 17:04:23,417 INFO    : Start M-step, rank 0
+2018-05-29 17:04:23,441 INFO    : Start training model with 512 distributions
+2018-05-29 17:04:23,479 INFO    : 	iteration 1 / 8
+2018-05-29 17:04:23,480 INFO    : 
+Start E-step, rank 0
+2018-05-29 17:25:28,885 INFO    : Start M-step, rank 0
+2018-05-29 17:25:28,959 INFO    : 	iteration 2 / 8
+2018-05-29 17:25:28,961 INFO    : 
+Start E-step, rank 0
+2018-05-29 17:46:35,048 INFO    : Start M-step, rank 0
+2018-05-29 17:46:35,103 INFO    : 	iteration 3 / 8
+2018-05-29 17:46:35,105 INFO    : 
+Start E-step, rank 0
+2018-05-29 18:07:41,147 INFO    : Start M-step, rank 0
+2018-05-29 18:07:41,169 INFO    : 	iteration 4 / 8
+2018-05-29 18:07:41,170 INFO    : 
+Start E-step, rank 0
+2018-05-29 18:28:43,527 INFO    : Start M-step, rank 0
+2018-05-29 18:28:43,599 INFO    : 	iteration 5 / 8
+2018-05-29 18:28:43,601 INFO    : 
+Start E-step, rank 0
+2018-05-29 18:49:49,951 INFO    : Start M-step, rank 0
+2018-05-29 18:49:49,981 INFO    : 	iteration 6 / 8
+2018-05-29 18:49:49,982 INFO    : 
+Start E-step, rank 0
+2018-05-29 19:10:54,999 INFO    : Start M-step, rank 0
+2018-05-29 19:10:55,046 INFO    : 	iteration 7 / 8
+2018-05-29 19:10:55,046 INFO    : 
+Start E-step, rank 0
+2018-05-29 19:32:04,568 INFO    : Start M-step, rank 0
+2018-05-29 19:32:04,621 INFO    : 	iteration 8 / 8
+2018-05-29 19:32:04,622 INFO    : 
+Start E-step, rank 0
+2018-05-29 19:53:07,816 INFO    : Start M-step, rank 0
+2018-05-29 21:45:09,332 INFO    : Start it 0
+2018-05-29 21:45:10,052 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 21:59:02,404 INFO    : Start it 1
+2018-05-29 21:59:02,991 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 22:16:55,628 INFO    : Start it 2
+2018-05-29 22:16:56,240 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 22:32:26,794 INFO    : Start it 3
+2018-05-29 22:32:27,360 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 22:50:45,609 INFO    : Start it 4
+2018-05-29 22:50:46,201 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 23:08:57,549 INFO    : Start it 5
+2018-05-29 23:08:58,151 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 23:26:23,258 INFO    : Start it 6
+2018-05-29 23:26:23,855 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-29 23:43:13,345 INFO    : Start it 7
+2018-05-29 23:43:14,044 INFO    : Process file: /home/jyh/D/jyh/data/fea/ivector_10000/stat/train_1024.h5
+2018-05-30 09:34:51,203 INFO    : =================================================================================================
+2018-05-30 09:35:01,685 INFO    : =================================================================================================
+2018-05-30 09:35:20,948 INFO    : =================================================================================================
+2018-05-30 09:36:10,404 INFO    : =================================================================================================
+2018-05-30 09:39:45,286 INFO    : =================================================================================================
+2018-05-30 09:47:15,645 INFO    : =================================================================================================
+2018-06-01 15:31:53,940 INFO    : =================================================================================================
+2018-06-01 21:12:48,995 INFO    : =================================================================================================

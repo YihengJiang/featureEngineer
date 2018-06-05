@@ -7,6 +7,10 @@
 #
 # Only use NIST-SRE 2010 female test set to test performance,but i will use all data available from 2010
 # to be the test set
+
+# other option:Paper33:X-VECTORS: ROBUST DNN EMBEDDINGS FOR SPEAKER RECOGNITION
+# In the experiments, the extractors (UBM/T or embedding DNN) are trained on SWBD and SRE,
+# and the PLDA classifiers are trained on just SRE.
 ################################################################################
 # 'extract_ivectors' ,'total_variability' is in sidekit.factor_analyser.FactorAnalyser.
 # 'EM_split' is in Mixture.
@@ -19,6 +23,8 @@ import re
 import sys
 
 import csv
+
+import time
 
 os.environ["SIDEKIT"] = "theano=false,theano_config=cpu,libsvm=false,mpi=false"
 
@@ -40,16 +46,138 @@ import multiprocessing
 import warnings
 import ctypes
 from mpi4py import MPI
+from sidekit.sv_utils import serialize
+import scipy
+from sidekit.factor_analyser import e_gather, e_worker
 
 root = glb.get_root()  # '/home/jyh/D/jyh/data/'
-experimentsIdentify = 'ivector_test'
+experimentsIdentify = 'ivector_all'
 inputDir = root + 'fea/'  # fea and idmap input dir
 ivectorWorkDir = inputDir + experimentsIdentify + '/'  # output of ivector ,lda,plda score result and so on
 logger = ut.logByLogginModule(experimentsIdentify)
 saveFlag = "10s"
 STAT_TYPE = np.float64
-trainNum = 1000
-tvNum = 1000
+trainNum = -1  # -1 represent work with all data
+
+
+class FA(FactorAnalyser):
+    def __init__(self):
+        super(FA, self).__init__()
+
+    def total_variability(self,
+                          stat_server_filename,
+                          ubm,
+                          tv_rank,
+                          nb_iter=20,
+                          min_div=True,
+                          tv_init=None,
+                          batch_size=300,
+                          save_init=False,
+                          output_file_name=None,
+                          num_thread=1):
+
+        if not isinstance(stat_server_filename, list):
+            stat_server_filename = [stat_server_filename]
+
+        assert (isinstance(ubm, Mixture) and ubm.validate()), "Second argument must be a proper Mixture"
+        assert (isinstance(nb_iter, int) and (0 < nb_iter)), "nb_iter must be a positive integer"
+
+        gmm_covariance = "diag" if ubm.invcov.ndim == 2 else "full"
+
+        # Set useful variables
+        with h5py.File(stat_server_filename[0], 'r') as fh:  # open the first StatServer to get size
+            _, sv_size = fh['stat1'].shape
+            feature_size = fh['stat1'].shape[1] // fh['stat0'].shape[1]
+            distrib_nb = fh['stat0'].shape[1]
+
+        upper_triangle_indices = numpy.triu_indices(tv_rank)
+
+        # mean and Sigma are initialized at ZEROS as statistics are centered
+        self.mean = numpy.zeros(ubm.get_mean_super_vector().shape, dtype=STAT_TYPE)
+        self.F = serialize(numpy.zeros((sv_size, tv_rank)).astype(STAT_TYPE))
+        if tv_init is None:
+            self.F = numpy.random.randn(sv_size, tv_rank).astype(STAT_TYPE)
+        else:
+            self.F = tv_init
+        self.Sigma = numpy.zeros(ubm.get_mean_super_vector().shape, dtype=STAT_TYPE)
+
+        # Save init if required
+        if output_file_name is None:
+            output_file_name = "temporary_factor_analyser"
+        if save_init:
+            self.write(output_file_name + "_init.h5")
+
+        # Estimate  TV iteratively
+        for it in range(nb_iter):
+            with ut.Timing("TV_EM:" + str(it)):
+                # Create serialized accumulators for the list of models to process
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', RuntimeWarning)
+                    _A = serialize(numpy.zeros((distrib_nb, tv_rank * (tv_rank + 1) // 2), dtype=STAT_TYPE))
+                    _C = serialize(numpy.zeros((tv_rank, sv_size), dtype=STAT_TYPE))
+                    _R = serialize(numpy.zeros((tv_rank * (tv_rank + 1) // 2), dtype=STAT_TYPE))
+
+                total_session_nb = 0
+
+                # E-step
+                # Accumulate statistics for each StatServer from the list
+                for stat_server_file in stat_server_filename:
+
+                    # get info from the current StatServer
+                    with h5py.File(stat_server_file, 'r') as fh:
+                        nb_sessions = fh["modelset"].shape[0]
+                        total_session_nb += nb_sessions
+                        batch_nb = int(numpy.floor(nb_sessions / float(batch_size) + 0.999))
+                        batch_indices = numpy.array_split(numpy.arange(nb_sessions), batch_nb)
+
+                        manager = multiprocessing.Manager()
+                        q = manager.Queue()
+                        pool = multiprocessing.Pool(num_thread + 2)
+
+                        # put Consumer to work first
+                        watcher = pool.apply_async(e_gather, ((_A, _C, _R), q))
+                        # fire off workers
+                        jobs = []
+
+                        # Load data per batch to reduce the memory footprint
+                        for batch_idx in batch_indices:
+                            # Create list of argument for a process
+                            arg = fh["stat0"][batch_idx, :], fh["stat1"][batch_idx, :], ubm, self.F
+                            job = pool.apply_async(e_worker, (arg, q))
+                            jobs.append(job)
+
+                        # collect results from the workers through the pool result queue
+                        for job in jobs:
+                            job.get()
+
+                        # now we are done, kill the consumer
+                        q.put((None, None, None, None))
+                        pool.close()
+
+                        _A, _C, _R = watcher.get()
+
+                _R /= total_session_nb
+
+                # M-step
+                _A_tmp = numpy.zeros((tv_rank, tv_rank), dtype=STAT_TYPE)
+                for c in range(distrib_nb):
+                    distrib_idx = range(c * feature_size, (c + 1) * feature_size)
+                    _A_tmp[upper_triangle_indices] = _A_tmp.T[upper_triangle_indices] = _A[c, :]
+                    self.F[distrib_idx, :] = scipy.linalg.solve(_A_tmp, _C[:, distrib_idx]).T
+
+                # Minimum divergence
+                if min_div:
+                    _R_tmp = numpy.zeros((tv_rank, tv_rank), dtype=STAT_TYPE)
+                    _R_tmp[upper_triangle_indices] = _R_tmp.T[upper_triangle_indices] = _R
+                    ch = scipy.linalg.cholesky(_R_tmp)
+                    self.F = self.F.dot(ch)
+
+                # Save the current FactorAnalyser
+                if output_file_name is not None:
+                    if it < nb_iter - 1:
+                        self.write(output_file_name + "_it-{}.h5".format(it))
+                    else:
+                        self.write(output_file_name + ".h5")
 
 
 class DataInteger():
@@ -733,14 +861,14 @@ class StatServer(sidekit.StatServer):
         return stat0_, stat1_
 
     @staticmethod
-    def globalVarinit(_lock, _data, _data1, _ubm, _server,_cou):
+    def globalVarinit(_lock, _data, _data1, _ubm, _server, _cou):
         global stat0_
         global stat1_
         global lock_
         global ubm_
         global server_
         global cou_
-        cou_=_cou
+        cou_ = _cou
         ubm_ = _ubm
         server_ = _server
         stat1_ = _data1
@@ -769,7 +897,7 @@ class StatServer(sidekit.StatServer):
 
         for count, idx in enumerate(seg_indices):
             # logging.debug('Compute statistics for {}'.format(self.segset[idx]))
-            glb.set_count()
+            # glb.set_count()
             show = self.segset[idx]
 
             # If using a FeaturesExtractor, get the channel number by checking the extension of the show
@@ -799,7 +927,8 @@ class StatServer(sidekit.StatServer):
                 self.stat1[idx, :] = numpy.reshape(numpy.transpose(
                     numpy.dot(data.transpose(), pp)), ubm.sv_size()).astype(STAT_TYPE)
 
-        glb.reset_count()  #reset countor
+                # glb.reset_count()  #reset countor
+
     # use to TV estimate
     def estimate_between_class(self,
                                itNb,
@@ -901,17 +1030,17 @@ class IV(IVector_Base.IVector_Base):
         self.Tmatrix = None
         self.train_iv, self.enroll_iv, self.test_iv = None, None, None
         self.train_iv_lda, self.enroll_iv_lda, self.test_iv_lda = None, None, None
-        self.feaDict, self.feaDict_test, self.feaDict_enroll = None,None, None
+        self.feaDict, self.feaDict_test, self.feaDict_enroll = None, None, None
         # parameters:################################################################
-        self.distrib_nb = 128  # number of Gaussian distributions for each GMM
-        self.rank_TV = 100  # 400 Rank of the total variability matrix
-        self.tv_iteration = 3  # number of iterations to run
-        self.plda_rk = 100  # 400 rank of the PLDA eigenvalues matrix,if use lda or anyother operate,this value will change
+        self.distrib_nb = 2048  # number of Gaussian distributions for each GMM
+        self.rank_TV = 400  # 400 Rank of the total variability matrix
+        self.tv_iteration = 10  # number of iterations to run
+        self.plda_rk = self.rank_TV  # 400 rank of the PLDA eigenvalues matrix,if use lda or anyother operate,this value will change
         self.feature_dir = inputDir + 'fea/'  # directory where to find the features
         self.nbThread = nbThread  # Number of parallel process to run,cause machine has 32 cpus,i set it is 32
         self.feaSize = 39  # feature size that include (23mfcc+1energy)+24derived+24accelerate
         self.batchSize = 100  # this is use in  calculating stat and ivector,but plda's batch is much bigger than it(as it set to 1000)
-        self.lda_rk = 70  # rank of lda
+        self.lda_rk = 400  # rank of lda
         self.trainDataDir = self.feature_dir + "train_mfcc.h5"
         self.testDataDir = self.feature_dir + "test_mfcc.h5"
         #############################################################################
@@ -990,10 +1119,11 @@ class IV(IVector_Base.IVector_Base):
         ###############################################################################################
 
         self.ubm_TV_idmap = sidekit.IdMap(inputDir + "ubm_TV_idmap.h5")
-        self.ubm_TV_idmap.leftids = self.ubm_TV_idmap.leftids[:trainNum]
-        self.ubm_TV_idmap.rightids = self.ubm_TV_idmap.rightids[:trainNum]
-        self.ubm_TV_idmap.start = self.ubm_TV_idmap.start[:trainNum]
-        self.ubm_TV_idmap.stop = self.ubm_TV_idmap.stop[:trainNum]
+        if trainNum != -1:
+            self.ubm_TV_idmap.leftids = self.ubm_TV_idmap.leftids[:trainNum]
+            self.ubm_TV_idmap.rightids = self.ubm_TV_idmap.rightids[:trainNum]
+            self.ubm_TV_idmap.start = self.ubm_TV_idmap.start[:trainNum]
+            self.ubm_TV_idmap.stop = self.ubm_TV_idmap.stop[:trainNum]
 
         self.plda_idmap = sidekit.IdMap(inputDir + "plda_idmap.h5")
         # </editor-fold>
@@ -1031,7 +1161,8 @@ class IV(IVector_Base.IVector_Base):
     def trainUBM_mpi(self):
         self.ubm = mpi_EM_split(Mixture(), self.feaServer, list(self.ubm_TV_idmap.rightids), self.distrib_nb,
                                 ivectorWorkDir + 'ubm/ubm',
-                                save_partial=True, ceil_cov=15, floor_cov=1e-4, num_thread=self.nbThread, logger=logger)
+                                save_partial=True, ceil_cov=10, floor_cov=1e-2, num_thread=self.nbThread, logger=logger)
+
         return self
 
     '''Step2.1: Calculate the statistics from train data set needed for the iVector model.'''
@@ -1061,48 +1192,29 @@ class IV(IVector_Base.IVector_Base):
         #                               seg_indices=range(test_stat.segset.shape[0]), num_thread=self.nbThread)
         #     test_stat.write(ivectorWorkDir + 'stat/test_"+saveFlag+"_{}.h5'.format(self.distrib_nb))
 
-        # with ut.Timing("calStat_background"):
-        #     # with ut.Timing("calStat_dataRead_train"):
-        #         # if self.feaDict == None:
-        #         #     feaS = FeaServer(feature_filename_structure=self.feature_dir + "{}.h5",
-        #         #                      dataset_list=["cep"])
-        #         #     self.feaDict = Mixture.getFea(self.trainDataDir, list(self.ubm_TV_idmap.rightids))
-        #         # else:
-        #         #     feaS = self.feaDict
-        #     feaS = FeaServer(feature_filename_structure=self.feature_dir + "{}.h5",
-        #                          dataset_list=["cep"])
-        #     with ut.Timing("calStat_accumulate_stat_train"):
-        #
-        #         self.back_stat = StatServer(self.ubm_TV_idmap, self.distrib_nb, self.feaSize)
-        #         self.back_stat.accumulate_stat(ubm=self.ubm, feature_server=feaS,
-        #                                        seg_indices=range(self.back_stat.segset.shape[0]), num_thread=self.nbThread)
-        #         self.back_stat.write(ivectorWorkDir + 'stat/train_{}.h5'.format(self.distrib_nb))
-        #
-        #
-        # with ut.Timing("calStat_enroll"):
-        #     feaS_e = FeaServer(feature_filename_structure=self.feature_dir + "{}.h5",
-        #                      dataset_list=["cep"])
-        #     # feaS.fea = feaS.stack_features_parallel2(list(self.enroll_idmap.rightids),
-        #     #                                          num_thread=self.nbThread)
-        #     #self.feaDict_enroll=Mixture.getFea(self.testDataDir,list(self.enroll_idmap.rightids))
-        #
-        #     self.enroll_stat = StatServer(self.enroll_idmap, self.distrib_nb, self.feaSize)
-        #     self.enroll_stat.accumulate_stat(ubm=self.ubm, feature_server=feaS_e,
-        #                                      seg_indices=range(self.enroll_stat.segset.shape[0]),
-        #                                      num_thread=self.nbThread)
-        #     self.enroll_stat.write(ivectorWorkDir + "stat/enroll_" + saveFlag + "_{}.h5".format(self.distrib_nb))
+        with ut.Timing("calStat_background"):
+            feaS = FeaServer(feature_filename_structure=self.feature_dir + "{}.h5",
+                             dataset_list=["cep"])
+            with ut.Timing("calStat_accumulate_stat_train"):
+                self.back_stat = StatServer(self.ubm_TV_idmap, self.distrib_nb, self.feaSize)
+                self.back_stat.accumulate_stat(ubm=self.ubm, feature_server=feaS,
+                                               seg_indices=range(self.back_stat.segset.shape[0]),
+                                               num_thread=self.nbThread)
+                self.back_stat.write(ivectorWorkDir + 'stat/train_{}.h5'.format(self.distrib_nb))
+
+        with ut.Timing("calStat_enroll"):
+            feaS_e = FeaServer(feature_filename_structure=self.feature_dir + "{}.h5",
+                               dataset_list=["cep"])
+
+            self.enroll_stat = StatServer(self.enroll_idmap, self.distrib_nb, self.feaSize)
+            self.enroll_stat.accumulate_stat(ubm=self.ubm, feature_server=feaS_e,
+                                             seg_indices=range(self.enroll_stat.segset.shape[0]),
+                                             num_thread=self.nbThread)
+            self.enroll_stat.write(ivectorWorkDir + "stat/enroll_" + saveFlag + "_{}.h5".format(self.distrib_nb))
 
         with ut.Timing("calStat_test"):
             feaS_t = FeaServer(feature_filename_structure=self.feature_dir + "{}.h5",
                                dataset_list=["cep"])
-            # feaS.fea = feaS.stack_features_parallel2(list(self.enroll_idmap.rightids),
-            #                                          num_thread=self.nbThread)
-            # self.feaDict_test = Mixture.getFea(self.testDataDir, list(self.test_idmap.rightids))
-            # self.test_idmap.leftids=self.test_idmap.leftids[675:705]
-            # self.test_idmap.rightids=self.test_idmap.rightids[675:705]
-            # self.test_idmap.start=self.test_idmap.start[675:705]
-            # self.test_idmap.stop=self.test_idmap.stop[675:705]
-
 
             self.test_stat = StatServer(self.test_idmap, self.distrib_nb, self.feaSize)
             self.test_stat.accumulate_stat(ubm=self.ubm, feature_server=feaS_t,
@@ -1113,7 +1225,7 @@ class IV(IVector_Base.IVector_Base):
     '''Step2.2: Learn the total variability subspace from all the train speaker data.'''
 
     @ut.timing("learnTV")
-    def learnTV(self, data=None):
+    def learnTV_deprecate(self, data=None):
         if self.ubm == None:
             self.ubm = Mixture(ivectorWorkDir + 'ubm/ubm_{}.h5'.format(self.distrib_nb))
         if self.back_stat == None:
@@ -1122,7 +1234,7 @@ class IV(IVector_Base.IVector_Base):
                     self.distrib_nb))  # this is super class,but not child class
         # cause Tmatrix compute so complex,i only use 10000 utterances to train it
         stat_bak = copy.deepcopy(self.back_stat)
-        self.back_stat.partition(tvNum)
+        # self.back_stat.partition(tvNum)
         tv_mean, tv, _, __, tv_sigma = self.back_stat.factor_analysis(rank_f=self.rank_TV,
                                                                       rank_g=0,
                                                                       rank_h=None,
@@ -1138,14 +1250,13 @@ class IV(IVector_Base.IVector_Base):
 
         # sidekit.sidekit_io.write_tv_hdf5((tv, tv_mean, tv_sigma),
         #                                  ivectorWorkDir + "Tmatrix/T_{}".format(self.distrib_nb))
-        self.back_stat=stat_bak
+        self.back_stat = stat_bak
         return self
 
     @ut.timing("learnTV")
     def learnTV_mpi(self, data=None):
         if self.ubm == None:
             self.ubm = Mixture(ivectorWorkDir + 'ubm/ubm_{}.h5'.format(self.distrib_nb))
-
         stat_server_file_name = ivectorWorkDir + 'stat/train_{}.h5'.format(self.distrib_nb)
         output_file_name = ivectorWorkDir + "Tmatrix/T_{}".format(self.distrib_nb)
         mpi_learnTV(stat_server_file_name=stat_server_file_name,
@@ -1156,33 +1267,56 @@ class IV(IVector_Base.IVector_Base):
                     tv_init=None,
                     save_init=False,
                     output_file_name=output_file_name, logger=logger)
-        ####################################non mpi mode########################################
-        # if self.back_stat == None:
-        #     with ut.Timing("learnTV_StatServer"):
-        #         self.back_stat = StatServer(ivectorWorkDir + 'stat/train_{}.h5'.format(
-        #             self.distrib_nb))  # this is super class,but not child class
-        #
-        # self.back_stat.partition(tvNum)
-        # fa=FactorAnalyser()
-        # fa.total_variability(stat_server_filename=stat_server_file_name,
-        #                   ubm=self.ubm,
-        #                   tv_rank=self.rank_TV,
-        #                   nb_iter=self.tv_iteration,
-        #                   min_div=True,
-        #                   tv_init=None,
-        #                   batch_size=self.batchSize*3,
-        #                   save_init=False,
-        #                   output_file_name=output_file_name,
-        #                   num_thread=self.nbThread)
-        # self.Tmatrix=fa
-        ########################################################################################
         return self
 
+    @ut.timing("learnTV")
+    def learnTV(self, data=None):
+        if self.ubm == None:
+            self.ubm = Mixture(ivectorWorkDir + 'ubm/ubm_{}.h5'.format(self.distrib_nb))
+        stat_server_file_name = ivectorWorkDir + 'stat/train_{}.h5'.format(self.distrib_nb)
+        output_file_name = ivectorWorkDir + "Tmatrix/T_{}".format(self.distrib_nb)
+
+        fa = FA()
+        fa.total_variability(stat_server_filename=stat_server_file_name,
+                             ubm=self.ubm,
+                             tv_rank=self.rank_TV,
+                             nb_iter=self.tv_iteration,
+                             min_div=True,
+                             tv_init=None,
+                             batch_size=self.batchSize * 3,
+                             save_init=False,
+                             output_file_name=output_file_name,
+                             num_thread=self.nbThread)
+        self.Tmatrix = fa
+        return self
 
     '''Step2.3:Now compute the development ivectors of train data set for each speaker and channel.  The result is size tvDim x nSpeakers x nChannels.'''
 
     @ut.timing("extractIV")
     def extractIV(self, data=None):
+
+        if self.ubm == None:
+            self.ubm = Mixture(ivectorWorkDir + 'ubm/ubm_{}.h5'.format(self.distrib_nb))
+        if self.Tmatrix == None:
+            self.Tmatrix = FactorAnalyser(ivectorWorkDir + 'Tmatrix/T_{}.h5'.format(self.distrib_nb))
+
+        with ut.Timing("background_iv"):
+            stat_server_file_name = ivectorWorkDir + 'stat/train_{}.h5'.format(self.distrib_nb)
+            self.train_iv = self.Tmatrix.extract_ivectors(self.ubm, stat_server_file_name, num_thread=self.nbThread)
+            self.train_iv.write(ivectorWorkDir + "iv/train_{}.h5".format(self.distrib_nb))
+        with ut.Timing("enroll_test_iv"):
+            stat_server_file_name = ivectorWorkDir + "stat/enroll_" + saveFlag + "_{}.h5".format(self.distrib_nb)
+            self.enroll_iv = self.Tmatrix.extract_ivectors(self.ubm, stat_server_file_name, num_thread=self.nbThread)
+            self.enroll_iv.write(ivectorWorkDir + "iv/enroll_" + saveFlag + "_{}.h5".format(self.distrib_nb))
+            stat_server_file_name = ivectorWorkDir + "stat/test_" + saveFlag + "_{}.h5".format(self.distrib_nb)
+            self.test_iv = self.Tmatrix.extract_ivectors(self.ubm, stat_server_file_name, num_thread=self.nbThread)
+            self.test_iv.write(ivectorWorkDir + "iv/test_" + saveFlag + "_{}.h5".format(self.distrib_nb))
+
+        return self
+
+    @ut.timing("extractIV")
+    def extractIV_deprecate(self, data=None):
+        #####################################################
         # just extract which i want to use in future,e.g:enroll,test ,train portion in sre04-08,
         # so that i would not extract ivector on switchnboard,cause i just use sre04-08 to train lda and plda
         if self.Tmatrix == None:
@@ -1192,7 +1326,7 @@ class IV(IVector_Base.IVector_Base):
             tv, tv_mean, tv_sigma = self.Tmatrix
             # free space
             del self.Tmatrix
-        with ut.Timing("background"):
+        with ut.Timing("background_iv"):
             ##########################################################################################
             # cause that plda train data is not the same as before,so there must be read
             # self.back_stat = StatServer.read_subset(ivectorWorkDir + "stat/train_{}.h5".format(self.distrib_nb),
@@ -1205,13 +1339,12 @@ class IV(IVector_Base.IVector_Base):
                 self.back_stat = StatServer(
                     ivectorWorkDir + "stat/train_{}.h5".format(self.distrib_nb))
             ##########################################################################################
-            # train_iv=sidekit.FactorAnalyser.extract_ivectors()
             train_iv = \
                 self.back_stat.estimate_hidden(tv_mean, tv_sigma, V=tv, batch_size=self.batchSize,
                                                num_thread=self.nbThread)[0]
             train_iv.write(ivectorWorkDir + "iv/train_{}.h5".format(self.distrib_nb))
 
-        with ut.Timing("enroll_test"):
+        with ut.Timing("enroll_test_iv"):
             if self.enroll_stat == None:
                 self.enroll_stat = StatServer(
                     ivectorWorkDir + "stat/enroll_" + saveFlag + "_{}.h5".format(self.distrib_nb))
@@ -1330,9 +1463,9 @@ class IV(IVector_Base.IVector_Base):
             wccn = self.train_iv_lda.get_wccn_choleski_stat1()
             scores_cos_lda_wcnn = sidekit.iv_scoring.cosine_scoring(self.enroll_iv_lda, self.test_iv_lda, self.test_ndx,
                                                                     wccn=wccn)
-            scores_cos_lda_wcnn.write(ivectorWorkDir + "score/cos_lda_wccn_" + saveFlag + "_{}.h5".format(self.distrib_nb))
+            scores_cos_lda_wcnn.write(
+                ivectorWorkDir + "score/cos_lda_wccn_" + saveFlag + "_{}.h5".format(self.distrib_nb))
         return self
-
 
     @ut.timing("mahalanobis_distance_Score")
     def mahalanobis_distance_Score(self):
@@ -1369,7 +1502,8 @@ class IV(IVector_Base.IVector_Base):
             B1 = self.train_iv.get_between_covariance_stat1()
             scores_2cov_sn1 = sidekit.iv_scoring.two_covariance_scoring(self.enroll_iv, self.test_iv, self.test_ndx, W1,
                                                                         B1)
-            scores_2cov_sn1.write(ivectorWorkDir + "score/2covar_sphernorm_" + saveFlag + "_{}.h5".format(self.distrib_nb))
+            scores_2cov_sn1.write(
+                ivectorWorkDir + "score/2covar_sphernorm_" + saveFlag + "_{}.h5".format(self.distrib_nb))
         return self
 
     '''Step3.2: Now train a Gaussian PLDA model with development i-vectors'''
@@ -1379,6 +1513,7 @@ class IV(IVector_Base.IVector_Base):
         # use  Spherical Nuisance Normalization,the length-norm is a case in this norm
         if self.train_iv == None:
             self.train_iv, self.enroll_iv, self.test_iv = self.readiv(["iv/train", "iv/enroll", "iv/test"])
+
         meanSN, CovSN = self.train_iv.estimate_spectral_norm_stat1(1,
                                                                    "sphNorm")  # default is length norm when 2nd parameter is "efr"
         self.train_iv.spectral_norm_stat1(meanSN[:1], CovSN[:1])
@@ -1635,7 +1770,8 @@ class IV(IVector_Base.IVector_Base):
                                                           plda_mean,
                                                           plda_F, plda_G,
                                                           plda_Sigma, full_model=False)
-            scores_plda.write(ivectorWorkDir + "score/plda_lda_sphernorm_" + saveFlag + "_{}.h5".format(self.distrib_nb))
+            scores_plda.write(
+                ivectorWorkDir + "score/plda_lda_sphernorm_" + saveFlag + "_{}.h5".format(self.distrib_nb))
         return self
 
     # there has no step4,because i merge it to past steps
@@ -1649,7 +1785,9 @@ class IV(IVector_Base.IVector_Base):
         # Set the prior parameters following NIST-SRE 2010 settings
         prior = sidekit.logit_effective_prior(0.001, 1, 1)
         # Initialize the DET plot to 2010 settings
-        dp = sidekit.DetPlot(window_style="sre10", plot_title=ivectorWorkDir + "result/IVector_SRE_2010")
+        dp = sidekit.DetPlot(window_style="sre10",
+                             plot_title=ivectorWorkDir + "result/IVector_SRE_2010" + str(self.rank_TV) + "_" + str(
+                                 self.lda_rk))
         dp.create_figure()
 
         graphData = ["cos", "cos_wccn", "cos_lda", "cos_lda_wccn", "madis", "2covar", "2covar_sphernorm",
@@ -1658,11 +1796,10 @@ class IV(IVector_Base.IVector_Base):
             tmp = ivectorWorkDir + "score/" + i + "_" + saveFlag + "_{}.h5".format(self.distrib_nb)
             if os.path.exists(tmp):
                 score = sidekit.Scores(tmp)
-                pass
-                # dp.set_system_from_scores(score, self.trial_key, sys_name=i)
-                # dp.plot_rocch_det(j,target_prior=prior)
+                dp.set_system_from_scores(score, self.trial_key, sys_name=i)
+                dp.plot_rocch_det(j, target_prior=prior)
 
-        dp.plot_DR30_both(idx=0)
+        # dp.plot_DR30_both(idx=0)
         dp.plot_mindcf_point(prior, idx=0)
 
     def readiv(self, fileList: list = None) -> (sidekit.StatServer, sidekit.StatServer, sidekit.StatServer):
@@ -1704,8 +1841,36 @@ class IV(IVector_Base.IVector_Base):
         ut.creatDirIfNotExists(ivectorWorkDir + "ubm")
         ut.creatDirIfNotExists(ivectorWorkDir + "score")
         if isCreate:
-            print("directory has no rights for you,please add rights to yourself,manully")
+            print("directory may has no rights for you,please add rights to yourself,manully")
             exit(1)
+
+    def selectDataForPlda(self):
+        '''
+        just use SWB data to train PLDA,this method is modify data on disk,,So other code needn't rewrite.
+        note that revising is permanent,so if want use origin data,i should rename data on disk.
+        '''
+        if self.train_iv == None:
+            train_iv = sidekit.StatServer.read(ivectorWorkDir + "iv/train_{}.h5".format(self.distrib_nb))
+        ind = [i for i, j in enumerate(train_iv.segset) if re.match("^((phase)|(cellular))/.*", j)]
+        if len(ind) == 0:
+            print("\n\n\n--------------------Does not do selectDataForPlda()------------------\n\n\n")
+            return self
+        newSer = sidekit.StatServer()
+        modelset, segset, stat1 = [], [], []
+        for i in ind:
+            segset.append(train_iv.segset[i])
+            modelset.append(train_iv.modelset[i])
+            stat1.append(train_iv.stat1[i][None])
+        newSer.segset = np.array(segset)
+        newSer.modelset = np.array(modelset)
+        newSer.stat1 = np.concatenate(stat1)
+        newSer.start = np.array([None] * len(ind))
+        newSer.stop = np.array([None] * len(ind))
+        newSer.stat0 = np.array([[1.0]] * len(ind))
+        # os.system("mv "+ivectorWorkDir + "iv/train_{}.h5".format(self.distrib_nb)+" "+ivectorWorkDir + "iv/train_{}.h5_all".format(self.distrib_nb))
+        # newSer.write(ivectorWorkDir + "iv/train_{}.h5".format(self.distrib_nb))
+        self.train_iv = newSer
+        return self
 
 
 def main():
@@ -1721,17 +1886,24 @@ def main():
     logger.info("=================================================================================================")
     # te=Mixture('/home/jyh/D/jyh/data/fea/ivector_test/ubm/ubm_128.h5')
 
-    DataInteger()
-    # iv = IV(48)
+    # Tmatrix = FactorAnalyser(ivectorWorkDir + 'Tmatrix/T_{}.h5'.format(64))
+    # Tmatrix1 = FactorAnalyser(ivectorWorkDir + 'Tmatrix/T_{}.h5_'.format(64))
+
+    # DataInteger()
+    iv = IV(48)
+    iv.selectDataForPlda()
+    # iv.visualization()
     # iv.calStat()
-    # statserver_file_name = ivectorWorkDir + "stat/test_" + saveFlag + "_{}.h5".format(128)
-    # te=sidekit.StatServer(statserver_file_name)
-    # statserver_file_name = ivectorWorkDir + "stat/te_" + saveFlag + "_{}.h5_".format(128)
-    # te1=sidekit.StatServer(statserver_file_name)
+    statserver_file_name = ivectorWorkDir + "stat/train_{}.h5".format(1024)
+    tr = sidekit.StatServer(statserver_file_name)
+    statserver_file_name = ivectorWorkDir + "stat/test_" + saveFlag + "_{}.h5".format(64)
+    te = sidekit.StatServer(statserver_file_name)
+    statserver_file_name = ivectorWorkDir + "stat/test_" + saveFlag + "_{}.h5_".format(64)
+    te1 = sidekit.StatServer(statserver_file_name)
     # iv.extractIV()
     # #iv.PLDA_Score().visualization()
-    # iv.calStat()#.calStat().learnTV_mpi().extractIV_mpi()
-    # #iv.LDA_WCCN_cos_Score().mahalanobis_distance_Score().two_covariance_Score().PLDA_Score().PLDA_LDA_Score().visualization()
+    # .calStat().learnTV_mpi().extractIV_mpi()
+    iv.two_covariance_Score().selectDataForPlda().PLDA_Score().PLDA_LDA_Score().visualization()
     pass
 
 

@@ -7,6 +7,7 @@ os.environ['SIDEKIT'] = 'theano=false,theano_config=cpu,libsvm=false,mpi=true'
 
 
 def main():
+    print("Begin stat" + ("-" * 60))
     iv = IVector.IV(48)
     iv.calStat()
 

@@ -1,0 +1,9 @@
+2018-06-02 15:53:12,137 INFO    : Start training model with 1 distributions
+2018-06-02 15:53:13,208 INFO    : 	iteration 1 / 1
+2018-06-02 15:53:13,208 INFO    : 
+Start E-step, rank 0
+2018-06-02 16:43:42,622 INFO    : Start M-step, rank 0
+2018-06-02 16:43:42,662 INFO    : Start training model with 2 distributions
+2018-06-02 16:43:42,672 INFO    : 	iteration 1 / 2
+2018-06-02 16:43:42,673 INFO    : 
+Start E-step, rank 0

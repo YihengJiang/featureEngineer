@@ -403,8 +403,8 @@ def EM_split(ubm,
     num_files = len(feature_list)
     local_files_offset = numpy.linspace(0, num_files, comm.size + 1).astype('int')
     local_files = feature_list[local_files_offset[comm.rank]:local_files_offset[comm.rank + 1]]
-    with ut.Timing("stack_features_parallel"):
-        local_features = features_server.stack_features_parallel(local_files, num_thread=num_thread)
+    # with ut.Timing("stack_features_parallel"):
+    #     local_features = features_server.stack_features_parallel(local_files, num_thread=num_thread)
     ########################################################################################
     # # Send n_frames and feature_size to all process
     # n_frames = comm.bcast(n_frames, root=0)
@@ -447,7 +447,7 @@ def EM_split(ubm,
             local_accum._reset()
 
             if comm.rank == 0:
-                logger.info("\titeration {} / {}".format(i + 1, it))
+                logger.info("iteration {} / {}".format(i + 1, it))
                 _tmp_llk = numpy.array(0)
                 accum._reset()
 
@@ -456,12 +456,12 @@ def EM_split(ubm,
 
             # E step
             if comm.rank == 0:
-                logger.info("\nStart E-step, rank {}".format(comm.rank))
+                logger.info("Start E-step, rank {}".format(comm.rank))
             ########################################################################################
-            local_llk = numpy.array(ubm._expectation(local_accum, local_features))
+            # local_llk = numpy.array(ubm._expectation(local_accum, local_features))
             ########################################################################################
-            # llk_acc=numpy.zeros(1)
-            # local_llk=ubm._expectation_list(local_accum, local_files, features_server, llk_acc, 1)
+            llk_acc = numpy.zeros(1)
+            local_llk = ubm._expectation_list(local_accum, local_files, features_server, llk_acc, 1)
             ########################################################################################
 
             # Reduce all accumulators in process 1
