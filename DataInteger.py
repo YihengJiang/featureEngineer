@@ -279,7 +279,7 @@ class Datainteger2():
     def __init__(self, idmapDir=inputDir + "dl_train_idmap.pk", utterNum=100, validUtterNum=2, frameRange=[200, 400],
                  frameInfo=inputDir + "fea/frameInfoSummary_train.npy",  # both valid and train info are in this file
                  indDir=inputDir + "dl_train_ind.pk", batch=64,
-                 newFeaDir=inputDir + "fea/dl/data", oriFeaDir=inputDir + "fea/"):
+                 newFeaDir=inputDir + "fea/dl/data", oriFeaDir=inputDir + "fea/", numWorker=20):
         '''
         both train and valid data will all be stored in the same file,the first utterNum data is train
         and the rest validUtterNum data is valid
@@ -299,10 +299,12 @@ class Datainteger2():
         self.frameRange = frameRange
         self.validUtterNum = validUtterNum
         self.personNum, self.idmapDict, self.ind, self.modelid2key = self.prepareInfo(frameInfo, idmapDir, indDir)
-        self.genData(self.ind, self.batchSize, oriFeaDir, newFeaDir)
-        # this code will be used in deep learning
+        ###################################################################
+        self.genData(self.ind, self.batchSize, oriFeaDir, newFeaDir, numWork)
+        ###################################################################
+        # this code will be used in deep learning,and past line is used in generating data
         # self.hf = [h5py.File(inputDir + "fea/dl/{}{}.h5".format(style, i), "r") for i in range(self.batchSize)]
-
+        ###################################################################
     # def __getitem__(self, index):
     #     '''
     #     self.ind: modelid,show,length,start,stop,k-----k represent data is in the k-th file
@@ -428,7 +430,7 @@ class Datainteger2():
 
     @staticmethod
     @ut.timing("genData")
-    def genData(ind, batchSize, oriFeaDir, newFeaDir):
+    def genData(ind, batchSize, oriFeaDir, newFeaDir, numWork):
         '''
         this method is used to generate data ,should be runed in single.
         :param ind: [modelid,show,length,start,stop,k]
@@ -439,7 +441,7 @@ class Datainteger2():
         manager = multiprocessing.Manager()
         data = manager.dict()
         lock = manager.Lock()
-        pool = multiprocessing.Pool(initializer=Datainteger2.init, initargs=(lock, feaSer, data))
+        pool = multiprocessing.Pool(processes=numWork, initializer=Datainteger2.init, initargs=(lock, feaSer, data))
         indS = [list() for i in range(batchSize)]
         for i in ind:
             for l, k in enumerate(i):
@@ -453,3 +455,7 @@ class Datainteger2():
             data.clear()
         pool.close()
         pool.join()
+
+
+if __name__ == '__main__':
+    a = Datainteger2()
