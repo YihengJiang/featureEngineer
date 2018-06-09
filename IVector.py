@@ -1,3 +1,67 @@
+# #!/usr/bin/env python
+# # -*- coding:utf-8 -*-
+# import multiprocessing
+# import h5py
+#
+# class f():
+#     @staticmethod
+#     def func(s,ss):
+#         data[str(s)] = s
+#
+#     @staticmethod
+#     def init(lock_, data_):
+#         global lock
+#         lock = lock_
+#         global data
+#         data = data_
+#
+#     @staticmethod
+#     def main():
+#         h5f = h5py.File("./f.txt", "w")
+#         ma = multiprocessing.Manager()
+#         data = ma.dict()
+#         lock = multiprocessing.Lock()
+#         po = multiprocessing.Pool(2, initargs=(lock, data), initializer=f.init)
+#         for i in range(-20,-1):
+#             po.apply_async(f.func, (i,i))
+#         po.close()
+#         po.join()
+#         for i, j in data.items():
+#             h5f[i] = j
+#         h5f.close()
+#
+# def func(s):
+#     data[str(s)]=s
+#
+# def init(lock_,data_):
+#     global lock
+#     lock=lock_
+#     global data
+#     data=data_
+#
+# def main():
+#     h5f = h5py.File("./f.txt", "w")
+#     ma=multiprocessing.Manager()
+#     data=ma.dict()
+#     lock=multiprocessing.Lock()
+#     po=multiprocessing.Pool(2,initargs=(lock,data),initializer=init)
+#     for i in range(20):
+#         po.apply_async(func,(i,))
+#     po.close()
+#     po.join()
+#     for i,j in data.items():
+#         h5f[i]=j
+#     h5f.close()
+# if __name__ == '__main__':
+#     # h5f = h5py.File("./f.txt", "w")
+#     # for s in range(20):
+#     #     h5f[str(s)] = s
+#     # h5f.close()
+#     f.main()
+#     h5f = h5py.File("./f.txt", "r")
+#     for i in [key for key in h5f.keys()]:
+#         print(h5f[i].value)
+
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 #################################################################################
@@ -21,7 +85,7 @@ import logging
 import os
 import re
 import sys
-
+import h5py
 import csv
 
 import time
@@ -178,183 +242,6 @@ class FA(FactorAnalyser):
                         self.write(output_file_name + "_it-{}.h5".format(it))
                     else:
                         self.write(output_file_name + ".h5")
-
-
-class DataInteger():
-    @staticmethod
-    def multiReadProc(shows, num_thread, feature_filename_structure):
-        manager = multiprocessing.Manager()
-
-        # f_=manager.list([f])
-        lens = len(shows)
-        feaM_ = manager.list([0] * lens)
-        feaF_ = manager.list([0] * lens)
-        label_ = manager.list([0] * lens)
-        lock_ = manager.Lock()
-        cou = manager.list([0])
-        feature_filename_structure = list([feature_filename_structure]) * lens
-        pool = multiprocessing.Pool(num_thread, initializer=DataInteger.globalVarinit,
-                                    initargs=(lock_, feaM_, feaF_, label_, cou))
-        pool.map(DataInteger.proc, zip(shows, list(range(lens)), feature_filename_structure))
-        pool.close()
-        pool.join()
-
-        return np.array([list(label_), list(feaM_)])
-
-    @staticmethod
-    def globalVarinit(_lock, _feaM, _feaF, _label, co):
-        global feaM_
-        global label_
-        global lock_
-        global cou
-        global feaF_
-        # global f_
-        # f_ = _f
-        cou = co
-        label_ = _label
-        feaM_ = _feaM
-        feaF_ = _feaF
-        lock_ = _lock
-
-    @staticmethod
-    def proc1(show_):
-        sho = show_[0]
-        ind = show_[1]
-        feature_filename_structure_ = show_[2]
-        show1_ = re.sub("/", "_", sho)
-        h5f = h5py.File(feature_filename_structure_.format(sho), "r")
-        sho = re.findall('/([^/]{4,})[T|M][A|B]', sho)[0]
-        featM = h5f["/".join((sho, "cep"))].value
-        h5f.close()
-
-        with lock_:
-            feaM_[ind] = featM.astype('float16')
-            label_[ind] = show1_
-            cou[0] += 1
-            if cou[0] % 100 == 0:
-                print(cou[0])
-
-    @staticmethod
-    def proc(show_):
-        sho = show_[0]
-        ind = show_[1]
-        feature_filename_structure_ = show_[2]
-
-        h5f = h5py.File(feature_filename_structure_.format(sho), "r")
-        show1_ = sho
-        # show1_ = re.sub("/", "_", sho)
-        if sho[:5] == 'sre10':
-            sho = re.findall('sre10/(.*)[T|M][A|B]', sho)[0]
-            # show1_="sre10_"+re.findall('.*_.*_.*_(.*)',show1_)[0]
-        else:
-            sho = re.findall('/([^/]{4,})[T|M][A|B]', sho)[0]
-
-        featM = h5f["/".join((sho, "cep"))].value
-        # featF = h5f["/".join((sho, "fb"))].value
-        h5f.close()
-
-        with lock_:
-            # feaM_[ind] = featM.astype('float32')
-            # feaF_[ind] = featF.astype('float32')
-            feaM_[ind] = featM.shape[0]
-            label_[ind] = show1_
-            cou[0] += 1
-            print(cou[0])
-
-    @ut.timing("DataInteger")
-    def __init__(self, train=True):
-        self.getSummary()
-        # self.summaryVisulization()
-
-    def summaryVisulization(self):
-        import matplotlib.pyplot as plt
-        train = np.load(inputDir + "fea/frameInfoSummary_train.npy")
-        enroll = np.load(inputDir + "fea/frameInfoSummary_enroll.npy")
-        test = np.load(inputDir + "fea/frameInfoSummary_test.npy")
-        with open(inputDir + "fea/frameInfoSummary_train.txt", "w+") as my_csv:  # writing the file as my_csv
-            csvWriter = csv.writer(my_csv, delimiter=',', )  # using the csv module to write the file
-            csvWriter.writerows(train)  # write every row in the matrix
-        with open(inputDir + "fea/frameInfoSummary_enroll.txt", "w+") as my_csv:  # writing the file as my_csv
-            csvWriter = csv.writer(my_csv, delimiter=',')  # using the csv module to write the file
-            csvWriter.writerows(enroll)  # write every row in the matrix
-        with open(inputDir + "fea/frameInfoSummary_test.txt", "w+") as my_csv:  # writing the file as my_csv
-            csvWriter = csv.writer(my_csv, delimiter=',')  # using the csv module to write the file
-            csvWriter.writerows(test)  # write every row in the matrix
-
-            # np.savetxt(inputDir + "fea/frameInfoSummary_train.txt",train[1,:])
-            # np.savetxt(inputDir + "fea/frameInfoSummary_enroll.txt", enroll[1,:])
-            # np.savetxt(inputDir + "fea/frameInfoSummary_test.txt", test[1,:])
-
-            # fig, (ax0, ax1,ax2) = plt.subplots(nrows=3, figsize=(9, 6))
-            # # 第二个参数是柱子宽一些还是窄一些，越大越窄越密
-            # ax0.hist(train[1,:], 40, normed=1, histtype='bar', facecolor='yellowgreen', alpha=0.75)
-            # ax0.set_title("train")
-            # # ax1.hist(enroll[1, :], 40, normed=1, histtype='bar', facecolor='yellowgreen', alpha=0.75)
-            # # ax1.set_title("enroll")
-            # # ax2.hist(test[1, :], 40, normed=1, histtype='bar', facecolor='yellowgreen', alpha=0.75)
-            # # ax2.set_title("test")
-            # fig.subplots_adjust(hspace=0.4)
-            # plt.show()
-            # print("finish")
-
-    def getSummary(self):
-        feature_filename_structure = root + "fea/fea/{}.h5"
-        ubm_TV_idmap = sidekit.IdMap(root + "fea/ubm_TV_idmap.h5")
-        ubm_list = list(ubm_TV_idmap.rightids)
-        tmp = DataInteger.multiReadProc(ubm_list, 48, feature_filename_structure)
-        np.save(inputDir + "fea/frameInfoSummary_train", tmp)
-        enroll_idmap_10s = sidekit.IdMap(root + "fea/enroll_idmap_10s.h5")
-        test_idmap_10s = sidekit.IdMap(root + "fea/test_idmap_10s.h5")
-        enro, test = list(enroll_idmap_10s.rightids), list(test_idmap_10s.rightids)
-        tmp = DataInteger.multiReadProc(enro, 48, feature_filename_structure)
-        np.save(inputDir + "fea/frameInfoSummary_enroll", tmp)
-        tmp = DataInteger.multiReadProc(test, 48, feature_filename_structure)
-        np.save(inputDir + "fea/frameInfoSummary_test", tmp)
-        print("finish...")
-        # if train:
-        #     ubm_TV_idmap = sidekit.IdMap(root + "fea/ubm_TV_idmap.h5")
-        #     ubm_list = list(ubm_TV_idmap.rightids)
-        #     with ut.Timing("multiReadProc"):
-        #         feaM, feaF, label, cou = DataInteger.multiReadProc(ubm_list, 48, feature_filename_structure)
-        #     with ut.Timing("train_mfcc"):
-        #         with h5py.File(root + "fea/fea/train_mfcc.h5", 'w') as f:
-        #             for i in range(cou[0]):
-        #                 if i%100==0:
-        #                     print(i)
-        #                 f.create_dataset(label[i], data=feaM[i],compression="gzip")
-        #     with ut.Timing("write to h5py"):
-        #         with h5py.File(root + "fea/fea/train_fbank.h5", 'w') as f:
-        #             for i in range(cou[0]):
-        #                 if i%100==0:
-        #                     print(i)
-        #                 f.create_dataset(label[i], data=feaF[i],compression="gzip")
-        #
-        # else:
-        #     enroll_idmap_10s = sidekit.IdMap(root + "fea/enroll_idmap_10s.h5")
-        #     test_idmap_10s = sidekit.IdMap(root + "fea/test_idmap_10s.h5")
-        #     trial_list = list(enroll_idmap_10s.rightids) + list(test_idmap_10s.rightids)
-        #     feaM, feaF, label, cou = DataInteger.multiReadProc(trial_list, 32, feature_filename_structure)
-        #     with ut.Timing("test_mfcc"):
-        #         with h5py.File(root + "fea/fea/test_mfcc.h5", 'w') as f:
-        #             for i in range(cou[0]):
-        #                 if i%100==0:
-        #                     print(i)
-        #                 f.create_dataset(label[i], data=feaM[i],compression="gzip")
-        #     with ut.Timing("test_fbank"):
-        #         with h5py.File(root + "fea/fea/test_fbank.h5", 'w') as f:
-        #             for i in range(cou[0]):
-        #                 if i%100==0:
-        #                     print(i)
-        #                 f.create_dataset(label[i], data=feaF[i],compression="gzip")
-
-    @staticmethod
-    def readData():
-        ubm_TV_idmap = sidekit.IdMap(root + "fea/ubm_TV_idmap.h5")
-        ubm_list = list(ubm_TV_idmap.rightids)
-        with h5py.File(root + "fea/fea/train_mfcc.h5", 'r') as f:
-            for i in range(len(ubm_list)):
-                s = f[re.sub("/", "_", ubm_list[i])].value
-                pass
 
 
 class FeaServer(sidekit.FeaturesServer):
@@ -1916,6 +1803,6 @@ if __name__ == '__main__':
     #     feat.append(h5f["/".join(("10sec/1/"+show, "cep"))])
     #
     #     h5f.close()
+    DataInteger()
 
-
-    main()
+    # main()

@@ -81,6 +81,10 @@ class IdMapConstructor():
 
     @staticmethod
     def tesTableConstructorCustom():
+        '''
+        this method will also generate deep learning data
+        :return:
+        '''
         idmapAll = IdMapConstructor.readAllSreIdmap()
         trial_key = IdMapConstructor.keyConstructorCustom()
         # sre10
