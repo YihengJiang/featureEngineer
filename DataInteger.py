@@ -275,7 +275,7 @@ class Datainteger2():
 
     # if just use data in
 
-
+    @ut.timing("__init__")
     def __init__(self, idmapDir=inputDir + "dl_train_idmap.pk", utterNum=100, validUtterNum=2, frameRange=[200, 400],
                  frameInfo=inputDir + "fea/frameInfoSummary_train.npy",  # both valid and train info are in this file
                  indDir=inputDir + "dl_train_ind.pk", batch=64,
@@ -300,7 +300,7 @@ class Datainteger2():
         self.validUtterNum = validUtterNum
         self.personNum, self.idmapDict, self.ind, self.modelid2key = self.prepareInfo(frameInfo, idmapDir, indDir)
         ###################################################################
-        self.genData(self.ind, self.batchSize, oriFeaDir, newFeaDir, numWork)
+        self.genData(self.ind, self.batchSize, oriFeaDir, newFeaDir, numWorker)
         ###################################################################
         # this code will be used in deep learning,and past line is used in generating data
         # self.hf = [h5py.File(inputDir + "fea/dl/{}{}.h5".format(style, i), "r") for i in range(self.batchSize)]
@@ -408,18 +408,17 @@ class Datainteger2():
                             columns=['id', 'fi', 'sta', 'sto'])
 
     @staticmethod
-    def init(lock_, feaSer_, data_):
+    def init(lock_, data_):
         global data
         data = data_
         global lock
         lock = lock_
-        global feaSer
-        feaSer = feaSer_
 
     @staticmethod
     def getData_core(param):
-        j, ind = param
-        tmp = feaSer[j].get_features(ind[1])
+        j, ind, feature_filename_structure = param
+        feaSer = FeaServer(feature_filename_structure=feature_filename_structure)
+        tmp = feaSer.get_features(ind[1])
         rang = tmp.shape[0] - ind[2] + 1
         if rang <= 0:
             rps = int(np.ceil((-rang + 1) / tmp.shape[0]))
@@ -430,24 +429,24 @@ class Datainteger2():
 
     @staticmethod
     @ut.timing("genData")
-    def genData(ind, batchSize, oriFeaDir, newFeaDir, numWork):
+    def genData(ind, batchSize, oriFeaDir, newFeaDir, numWorker):
         '''
         this method is used to generate data ,should be runed in single.
         :param ind: [modelid,show,length,start,stop,k]
         :param batchSize:
         :return:
         '''
-        feaSer = [FeaServer(feature_filename_structure=oriFeaDir + "{}.h5")] * batchSize
+        # feaSer = [FeaServer(feature_filename_structure=oriFeaDir + "{}.h5")] * batchSize
         manager = multiprocessing.Manager()
         data = manager.dict()
         lock = manager.Lock()
-        pool = multiprocessing.Pool(processes=numWork, initializer=Datainteger2.init, initargs=(lock, feaSer, data))
+        pool = multiprocessing.Pool(processes=numWorker, initializer=Datainteger2.init, initargs=(lock, data))
         indS = [list() for i in range(batchSize)]
         for i in ind:
             for l, k in enumerate(i):
                 indS[l].append(k)
         for j, i in enumerate(indS):
-            pool.map(Datainteger2.getData_core, zip(range(len(i)), i))
+            pool.map(Datainteger2.getData_core, zip(range(len(i)), i, [oriFeaDir + "{}.h5"] * len(i)))
             hf = h5py.File(newFeaDir + "{}.h5".format(j), "w")
             for l, k in data.items():
                 hf[l] = k
